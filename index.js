@@ -4,8 +4,6 @@ const line = require('@line/bot-sdk');
 const app = express();
 
 // LINE config：讀取環境變數
-const line = require('@line/bot-sdk');
-
 const config = {
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
   channelSecret: process.env.LINE_CHANNEL_SECRET,
