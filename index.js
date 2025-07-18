@@ -1,43 +1,34 @@
-const express = require("express");
-const axios = require("axios");
-require("dotenv").config();
+const express = require('express');
+const line = require('@line/bot-sdk');
 
 const app = express();
-app.use(express.json());
 
-const CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+// LINE config：讀取環境變數
+const config = {
+  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+  channelSecret: process.env.LINE_CHANNEL_SECRET,
+};
 
-app.get("/", (req, res) => {
-  res.send("LINE Card Sender is running!");
+const client = new line.Client(config);
+
+app.post('/webhook', line.middleware(config), (req, res) => {
+  Promise
+    .all(req.body.events.map(handleEvent))
+    .then(result => res.json(result));
 });
 
-app.post("/send-card", async (req, res) => {
-  const { userId, message } = req.body;
-
-  if (!userId || !message) {
-    return res.status(400).json({ error: "Missing userId or message" });
+function handleEvent(event) {
+  if (event.type !== 'message' || event.message.type !== 'text') {
+    return Promise.resolve(null);
   }
 
-  try {
-    await axios.post(
-      "https://api.line.me/v2/bot/message/push",
-      {
-        to: userId,
-        messages: [message]
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`
-        }
-      }
-    );
-    res.json({ success: true });
-  } catch (error) {
-    console.error("LINE API Error:", error.response?.data || error.message);
-    res.status(500).json({ error: "Failed to send message" });
-  }
+  return client.replyMessage(event.replyToken, {
+    type: 'text',
+    text: `您說的是：「${event.message.text}」`,
+  });
+}
+
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
 });
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
